@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Timestamp Generator</title>
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 25px 15px;
+  background: #1e1f22;
+  color: #f2f3f5;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  max-width: 560px;
+  margin: auto;
+  background: #2b2d31;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 8px 30px #0004;
+}
+
+h1 { font-size: 25px; margin-top: 0; }
+.subtitle { color: #b5bac1; margin-bottom: 25px; }
+
+label {
+  display: block;
+  margin: 17px 0 7px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  background: #1e1f22;
+  color: white;
+  border: 1px solid #484b52;
+  border-radius: 7px;
+  font-size: 15px;
+}
+
+input:focus, select:focus {
+  outline: 2px solid #5865f2;
+}
+
+button {
+  border: none;
+  border-radius: 7px;
+  padding: 12px 17px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.primary {
+  background: #5865f2;
+  color: white;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.secondary {
+  background: #404249;
+  color: white;
+}
+
+button:hover { filter: brightness(1.15); }
+
+.result {
+  margin-top: 22px;
+  padding: 17px;
+  background: #1e1f22;
+  border-radius: 9px;
+}
+
+.result h3 { margin-top: 0; }
+
+.output {
+  padding: 12px;
+  background: #111214;
+  color: #23d18b;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  font-size: 15px;
+}
+
+.preview {
+  margin-top: 15px;
+  padding: 13px;
+  background: #313338;
+  border-radius: 7px;
+  color: #dbdee1;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: #b5bac1;
+  font-size: 12px;
+  margin-top: 7px;
+}
+
+.status {
+  color: #23d18b;
+  font-size: 13px;
+  margin-top: 10px;
+  min-height: 16px;
+}
+
+.hidden { display: none; }
+
+.footer {
+  color: #949ba4;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 22px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>🕒 Discord Timestamp Generator</h1>
+  <p class="subtitle">
+    Create custom Discord countdowns and date timestamps.
+  </p>
+
+  <label for="date">Choose a date and time</label>
+  <input type="datetime-local" id="date">
+
+  <label for="timezone">Time zone</label>
+  <select id="timezone">
+    <option value="UTC">UTC</option>
+    <option value="local">My local time</option>
+  </select>
+  <p class="hint">
+    UTC means the selected time is interpreted as UTC, regardless of your location.
+  </p>
+
+  <label for="format">Timestamp format</label>
+  <select id="format">
+    <option value="R">Countdown (e.g. in 5 hours)</option>
+    <option value="F">Full date and time</option>
+    <option value="f">Date and time</option>
+    <option value="D">Date only</option>
+    <option value="t">Time only (short)</option>
+    <option value="T">Time only (long)</option>
+    <option value="d">Short date</option>
+  </select>
+
+  <label for="message">Custom message (optional)</label>
+  <input type="text" id="message"
+    placeholder="🎄 Christmas is coming!">
+
+  <button class="primary" onclick="generate()">
+    Generate timestamp
+  </button>
+
+  <div class="result">
+    <h3>Generated result</h3>
+
+    <label>Discord code</label>
+    <div class="output" id="output">
+      Your timestamp will appear here.
+    </div>
+
+    <button class="secondary" onclick="copyCode()"
+      style="width:100%; margin-top:12px">
+      📋 Copy timestamp
+    </button>
+
+    <label>Complete message</label>
+    <div class="output" id="fullOutput">
+      Your message will appear here.
+    </div>
+
+    <button class="secondary" onclick="copyMessage()"
+      style="width:100%; margin-top:12px">
+      📋 Copy complete message
+    </button>
+
+    <div class="preview">
+      <strong>Message preview</strong>
+      <p id="preview">Your message will appear here.</p>
+      <p class="hint">
+        Discord renders the timestamp when you send the message.
+      </p>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="footer">
+    Discord Timestamp Generator • Uses Unix timestamps
+  </div>
+</div>
+
+<script>
+const dateInput = document.getElementById("date");
+const timezoneInput = document.getElementById("timezone");
+const formatInput = document.getElementById("format");
+const messageInput = document.getElementById("message");
+
+let generatedCode = "";
+let generatedMessage = "";
+
+function getTimestamp() {
+  const value = dateInput.value;
+
+  if (!value) return null;
+
+  if (timezoneInput.value === "UTC") {
+    const [date, time] = value.split("T");
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+
+    return Math.floor(Date.UTC(
+      year, month - 1, day, hour, minute
+    ) / 1000);
+  }
+
+  return Math.floor(new Date(value).getTime() / 1000);
+}
+
+function generate() {
+  const timestamp = getTimestamp();
+
+  if (timestamp === null || !Number.isFinite(timestamp)) {
+    alert("Please choose a valid date and time!");
+    return;
+  }
+
+  const format = formatInput.value;
+  generatedCode = `<t:${timestamp}:${format}>`;
+
+  const message = messageInput.value.trim();
+
+  generatedMessage = message
+    ? `${message} ${generatedCode}`
+    : generatedCode;
+
+  document.getElementById("output").textContent =
+    generatedCode;
+
+  document.getElementById("fullOutput").textContent =
+    generatedMessage;
+
+  document.getElementById("preview").textContent =
+    generatedMessage;
+
+  document.getElementById("status").textContent =
+    "✓ Timestamp generated successfully!";
+}
+
+async function copyText(value) {
+  if (!value) {
+    alert("Generate a timestamp first!");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(value);
+    document.getElementById("status").textContent =
+      "✓ Copied to clipboard!";
+  } catch (error) {
+    document.getElementById("status").textContent =
+      "Clipboard unavailable. Select and copy the text manually.";
+  }
+}
+
+function copyCode() {
+  copyText(generatedCode);
+}
+
+function copyMessage() {
+  copyText(generatedMessage);
+}
+
+// Default date: December 25, 2026, 11:59 PM UTC
+dateInput.value = "2026-12-25T23:59";
+timezoneInput.value = "UTC";
+
+</script>
+</body>
+</html>
